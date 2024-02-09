@@ -10,23 +10,22 @@ const dbPath = path.join(__dirname, "todoApplication.db");
 
 let db = null;
 
-const initializeDbAndServer = async () => {
+const initializeDBAndServer = async () => {
   try {
     db = await open({
       filename: dbPath,
       driver: sqlite3.Database,
     });
-
     app.listen(3000, () => {
       console.log("Server Running at http://localhost:3000/");
     });
-  } catch (error) {
-    console.log(`DB error: ${error.message}`);
+  } catch (e) {
+    console.log(`DB error: ${e.message}`);
     process.exit(1);
   }
 };
 
-initializeDbAndServer();
+initializeDBAndServer();
 
 const hasPriorityAndStatusProperties = (requestQuery) => {
   return (
@@ -71,7 +70,7 @@ const isValidTodoPriority = (item) => {
 };
 
 const isValidTodoCategory = (item) => {
-  if (item === "WORK" || item === "MEDIUM" || item === "LOW") {
+  if (item === "WORK" || item === "HOME" || item === "LEARNING") {
     return true;
   } else {
     return false;
@@ -101,6 +100,8 @@ const convertDueDate = (dbObject) => {
   };
 };
 
+//API = 1
+
 app.get("/todos/", async (request, response) => {
   let data = null;
   let getTodosQuery = "";
@@ -110,7 +111,7 @@ app.get("/todos/", async (request, response) => {
     case hasPriorityAndStatusProperties(request.query):
       getTodosQuery = `
             SELECT
-              *
+            *
             FROM
             todo
             WHERE
@@ -131,9 +132,9 @@ app.get("/todos/", async (request, response) => {
     case hasCategoryAndStatusProperties(request.query):
       getTodoQuery = `
             SELECT
-              *
+            *
             FROM
-            todo
+            todo    
             WHERE
             todo LIKE '%${search_q}%'
             AND status = '${status}'
@@ -181,7 +182,7 @@ app.get("/todos/", async (request, response) => {
            AND category = '${category}';`;
       if (isValidTodoCategory(category)) {
         data = await db.all(getTodosQuery);
-        response.send(map((object) => convertDueDate(object)));
+        response.send(data.map((object) => convertDueDate(object)));
       } else {
         response.status(400);
         response.send("Invalid Todo Category");
@@ -211,7 +212,7 @@ app.get("/todos/", async (request, response) => {
            FROM
            todo
            WHERE
-           todo LIKE '%${search_query}%'
+           todo LIKE '%${search_q}%'
            AND status = '${status}';`;
       if (isValidTodoStatus(status)) {
         data = await db.all(getTodosQuery);
@@ -234,6 +235,8 @@ app.get("/todos/", async (request, response) => {
   }
 });
 
+//API = 2
+
 app.get("/todos/:todoId/", async (request, response) => {
   const { todoId } = request.params;
   const getTodoQuery = `
@@ -246,6 +249,8 @@ app.get("/todos/:todoId/", async (request, response) => {
   const todo = await db.get(getTodoQuery);
   response.send(convertDueDate(todo));
 });
+
+//API = 3
 
 app.get("/agenda/", async (request, response) => {
   const { date } = request.query;
@@ -272,6 +277,8 @@ app.get("/agenda/", async (request, response) => {
   }
 });
 
+//API = 4
+
 app.post("/todos", async (request, response) => {
   const todoDetails = request.body;
   const { id, todo, priority, status, category, dueDate } = todoDetails;
@@ -297,7 +304,8 @@ app.post("/todos", async (request, response) => {
       const formattedDate = format(new Date(dueDate), "yyy-MM-dd");
       const addTodoQuery = `
           INSERT INTO 
-          todo(id, todo, priority, status, category, due_date)
+          todo (id, todo, priority, status, category, due_date)
+          VALUES
           (
               ${id},
               '${todo}',
@@ -311,6 +319,8 @@ app.post("/todos", async (request, response) => {
       break;
   }
 });
+
+//API = 5
 
 app.put("/todos/:todoId/", async (request, response) => {
   const { todoId } = request.params;
@@ -391,6 +401,8 @@ app.put("/todos/:todoId/", async (request, response) => {
       break;
   }
 });
+
+//API = 6
 
 app.delete("/todos/:todoId/", async (request, response) => {
   const { todoId } = request.params;
